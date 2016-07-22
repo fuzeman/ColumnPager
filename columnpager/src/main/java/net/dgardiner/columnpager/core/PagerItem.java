@@ -1,4 +1,4 @@
-package net.dgardiner.viewpagerex.core;
+package net.dgardiner.columnpager.core;
 
 public class PagerItem {
     private int position;

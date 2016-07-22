@@ -1,7 +1,7 @@
-package net.dgardiner.viewpagerex.adapters;
+package net.dgardiner.columnpager.adapters;
 
 import android.support.v4.app.Fragment;
-import net.dgardiner.viewpagerex.core.PagerItem;
+import net.dgardiner.columnpager.core.PagerItem;
 
 public class PagerFragment extends Fragment {
     private PagerItem item;

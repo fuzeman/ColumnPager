@@ -1,1 +1,1 @@
-include ':app', ':viewpagerex'
+include ':app', ':columnpager'

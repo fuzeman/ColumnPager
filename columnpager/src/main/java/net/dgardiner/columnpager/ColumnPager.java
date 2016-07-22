@@ -1,4 +1,4 @@
-package net.dgardiner.viewpagerex;
+package net.dgardiner.columnpager;
 
 import android.content.Context;
 import android.content.res.TypedArray;
@@ -14,15 +14,15 @@ import android.util.Log;
 import android.view.*;
 import android.view.animation.Interpolator;
 import android.widget.Scroller;
-import net.dgardiner.viewpagerex.adapters.PagerAdapter;
-import net.dgardiner.viewpagerex.adapters.PagerFragment;
-import net.dgardiner.viewpagerex.core.PagerItem;
+import net.dgardiner.columnpager.adapters.PagerAdapter;
+import net.dgardiner.columnpager.adapters.PagerFragment;
+import net.dgardiner.columnpager.core.PagerItem;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ViewPager extends ViewGroup {
-    private static final String TAG = "ViewPager";
+public class ColumnPager extends ViewGroup {
+    private static final String TAG = "ColumnPager";
     private static final boolean DEBUG = true;
 
     private static final boolean USE_CACHE = false;
@@ -166,17 +166,17 @@ public class ViewPager extends ViewGroup {
     // Constructor
     //
 
-    public ViewPager(Context context) {
+    public ColumnPager(Context context) {
         super(context);
         initialize();
     }
 
-    public ViewPager(Context context, AttributeSet attrs) {
+    public ColumnPager(Context context, AttributeSet attrs) {
         super(context, attrs);
         initialize();
     }
 
-    public ViewPager(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ColumnPager(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         initialize();
     }
@@ -279,7 +279,7 @@ public class ViewPager extends ViewGroup {
     }
 
     /**
-     * Set the currently selected page. If the ViewPager has already been through its first
+     * Set the currently selected page. If the ColumnPager has already been through its first
      * layout with its current adapter there will be a smooth animated transition between
      * the current item and the specified item.
      *
@@ -1112,7 +1112,7 @@ public class ViewPager extends ViewGroup {
 
             for (int i = 0; i < childCount; i++) {
                 final View child = getChildAt(i);
-                final android.support.v4.view.ViewPager.LayoutParams lp = (android.support.v4.view.ViewPager.LayoutParams) child.getLayoutParams();
+                final LayoutParams lp = (LayoutParams) child.getLayoutParams();
                 if (!lp.isDecor) continue;
 
                 final int hgrav = lp.gravity & Gravity.HORIZONTAL_GRAVITY_MASK;
@@ -1850,9 +1850,9 @@ public class ViewPager extends ViewGroup {
          * or when it is fully stopped/idle.
          *
          * @param state The new scroll state.
-         * @see android.support.v4.view.ViewPager#SCROLL_STATE_IDLE
-         * @see android.support.v4.view.ViewPager#SCROLL_STATE_DRAGGING
-         * @see android.support.v4.view.ViewPager#SCROLL_STATE_SETTLING
+         * @see android.support.v4.view.ColumnPager#SCROLL_STATE_IDLE
+         * @see android.support.v4.view.ColumnPager#SCROLL_STATE_DRAGGING
+         * @see android.support.v4.view.ColumnPager#SCROLL_STATE_SETTLING
          */
         void onPageScrollStateChanged(int state);
     }
@@ -1863,7 +1863,7 @@ public class ViewPager extends ViewGroup {
      * to the page views using animation properties.
      *
      * <p>As property animation is only supported as of Android 3.0 and forward,
-     * setting a PageTransformer on a ViewPager on earlier platform versions will
+     * setting a PageTransformer on a ColumnPager on earlier platform versions will
      * be ignored.</p>
      */
     public interface PageTransformer {

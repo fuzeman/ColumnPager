@@ -1,15 +1,13 @@
-package net.dgardiner.viewpagerex_demo.fragments;
+package net.dgardiner.columnpager_demo.fragments;
 
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import net.dgardiner.viewpagerex.adapters.PagerFragment;
-import net.dgardiner.viewpagerex_demo.R;
+import net.dgardiner.columnpager.adapters.PagerFragment;
+import net.dgardiner.columnpager_demo.R;
 
 public class SimpleFragment extends PagerFragment {
     private String title;

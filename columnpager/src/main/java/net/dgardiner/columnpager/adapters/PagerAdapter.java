@@ -1,4 +1,4 @@
-package net.dgardiner.viewpagerex.adapters;
+package net.dgardiner.columnpager.adapters;
 
 import android.view.ViewGroup;
 

@@ -1,11 +1,10 @@
-package net.dgardiner.viewpagerex_demo.adapters;
+package net.dgardiner.columnpager_demo.adapters;
 
 import android.graphics.Color;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import net.dgardiner.viewpagerex.adapters.FragmentPagerAdapter;
-import net.dgardiner.viewpagerex.adapters.PagerFragment;
-import net.dgardiner.viewpagerex_demo.fragments.SimpleFragment;
+import net.dgardiner.columnpager.adapters.FragmentPagerAdapter;
+import net.dgardiner.columnpager.adapters.PagerFragment;
+import net.dgardiner.columnpager_demo.fragments.SimpleFragment;
 
 import java.util.Random;
 
