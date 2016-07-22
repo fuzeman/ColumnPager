@@ -4,9 +4,10 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 
-public abstract class FragmentPagerAdapter implements PagerAdapter {
+public abstract class FragmentPagerAdapter extends BasePagerAdapter {
     private static final String TAG = "FragmentPagerAdapter";
     private static final boolean DEBUG = true;
 
@@ -22,16 +23,15 @@ public abstract class FragmentPagerAdapter implements PagerAdapter {
     @Override
     public abstract int getCount();
 
-    //
-    // Public methods
-    //
+    // region Public methods
 
     public long getItemId(int position) {
         return position;
     }
 
-    public void startUpdate(ViewGroup container) {
-    }
+    // endregion
+
+    // region BasePagerAdapter
 
     @Override
     public Object instantiateItem(ViewGroup container, int position) {
@@ -68,6 +68,7 @@ public abstract class FragmentPagerAdapter implements PagerAdapter {
         return fragment;
     }
 
+    @Override
     public void destroyItem(ViewGroup container, int position, Object object) {
         if (mCurTransaction == null) {
             mCurTransaction = mFragmentManager.beginTransaction();
@@ -81,6 +82,7 @@ public abstract class FragmentPagerAdapter implements PagerAdapter {
         mCurTransaction.detach((Fragment)object);
     }
 
+    @Override
     public void finishUpdate(ViewGroup container) {
         if (mCurTransaction != null) {
             mCurTransaction.commitAllowingStateLoss();
@@ -90,11 +92,18 @@ public abstract class FragmentPagerAdapter implements PagerAdapter {
         }
     }
 
-    //
-    // Private methods
-    //
+    @Override
+    public boolean isViewFromObject(View view, Object object) {
+        return ((Fragment) object).getView() == view;
+    }
+
+    // endregion
+
+    // region Private methods
 
     private static String makeFragmentName(int viewId, long id) {
         return "android:switcher:" + viewId + ":" + id;
     }
+
+    // endregion
 }
