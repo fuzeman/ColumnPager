@@ -24,6 +24,6 @@ public class SimpleAdapter extends FragmentPagerAdapter {
 
     @Override
     public int getCount() {
-        return 7;
+        return 24;
     }
 }

@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
         heightSeekBar.setOnSeekBarChangeListener(heightControl);
 
         // Update column control
-        columnControl.setMax(7);
+        columnControl.setMax(12);
         columnControl.setProgress(3);
 
         // Update width + height seekbars once drawn
