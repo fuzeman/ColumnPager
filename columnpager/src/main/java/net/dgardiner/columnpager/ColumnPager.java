@@ -61,7 +61,7 @@ import java.util.List;
 public class ColumnPager extends ViewGroup {
     // region Static variables
     private static final String TAG = "ColumnPager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static final boolean USE_CACHE = false;
 
@@ -161,6 +161,10 @@ public class ColumnPager extends ViewGroup {
     private int mTopPageBounds;
     private int mBottomPageBounds;
 
+    private int mClientWidth;
+    private int mPageWidth;
+    private int mRemainingWidth;
+
     // Offsets of the first and last items, if known.
     // Set during population, used to determine if we are at the beginning
     // or end of the pager data set during touch scrolling.
@@ -228,7 +232,12 @@ public class ColumnPager extends ViewGroup {
     private final Runnable mEndScrollRunnable = new Runnable() {
         public void run() {
             setScrollState(SCROLL_STATE_IDLE);
+
+            // Populate pager
             populate();
+
+            // Ensure scroll position is set correctly
+            scrollToItem(mCurItem, true);
         }
     };
 
@@ -397,6 +406,7 @@ public class ColumnPager extends ViewGroup {
         populate();
 
         // Refresh view
+        // TODO is this still required?
         requestLayout();
     }
 
@@ -595,13 +605,12 @@ public class ColumnPager extends ViewGroup {
             return false;
         }
 
-        final int width = getClientWidth();
         final int scrollX = getScrollX();
 
         if (direction < 0) {
-            return (scrollX > (int) (width * mFirstOffset));
+            return (scrollX > (int) (mClientWidth * mFirstOffset));
         } else if (direction > 0) {
-            return (scrollX < (int) (width * mLastOffset));
+            return (scrollX < (int) (mClientWidth * mLastOffset));
         } else {
             return false;
         }
@@ -757,16 +766,6 @@ public class ColumnPager extends ViewGroup {
 
     // region Private methods
 
-    private int getClientWidth() {
-        return getMeasuredWidth() - getPaddingLeft() - getPaddingRight();
-    }
-
-    private int getPageWidth() {
-        return (int)(
-            ((float) getClientWidth()) / getColumns()
-        );
-    }
-
     private Rect getChildRectInPagerCoordinates(Rect outRect, View child) {
         if (outRect == null) {
             outRect = new Rect();
@@ -795,6 +794,33 @@ public class ColumnPager extends ViewGroup {
         }
 
         return outRect;
+    }
+
+    private int calculatePageWidth(int position) {
+        int pageWidth = mPageWidth;
+
+        if(mRemainingWidth < 1) {
+            return pageWidth;
+        }
+
+        if(position < mCurItem || position > mCurItem + getColumns() - 1) {
+            return pageWidth;
+        }
+
+        int pad = (int) Math.ceil(((float) mRemainingWidth) / getColumns());
+        int count = mRemainingWidth / pad;
+
+        int headCount = (int) Math.floor(((float) count) / 2);
+        int tailCount = count - headCount;
+
+        int headEnd = mCurItem + headCount;
+        int tailStart = mCurItem + getColumns() - tailCount - 1;
+
+        if(position < headEnd || position > tailStart) {
+            pageWidth += pad;
+        }
+
+        return pageWidth;
     }
 
     private boolean pageLeft() {
@@ -900,7 +926,7 @@ public class ColumnPager extends ViewGroup {
         PagerItem item = new PagerItem(position, index);
 
         // Update attributes
-        item.setWidth((int)(((float) getClientWidth()) / 3));
+        item.setWidth(calculatePageWidth(position));
 
         // Instantiate item fragment
         Object object = mAdapter.instantiateItem(this, position);
@@ -920,7 +946,6 @@ public class ColumnPager extends ViewGroup {
             mItems.add(index, item);
         }
 
-        Log.d(TAG, " - Created item: " + item);
         return item;
     }
 
@@ -976,7 +1001,7 @@ public class ColumnPager extends ViewGroup {
                 ii = mTempItem;
                 ii.setOffset(lastOffset + lastWidth + mPageMargin);
                 ii.setPosition(lastPos + 1);
-                ii.setWidth(getPageWidth());
+                ii.setWidth(mPageWidth);
                 i--;
             }
 
@@ -1091,8 +1116,6 @@ public class ColumnPager extends ViewGroup {
         if (mCurItem != newCurrentItem) {
             oldCurInfo = infoForPosition(mCurItem);
             mCurItem = newCurrentItem;
-
-            Log.d(TAG, " - Current item updated to " + newCurrentItem);
         }
 
         if(mAdapter == null) {
@@ -1131,9 +1154,6 @@ public class ColumnPager extends ViewGroup {
         if (curItem == null && N > 0) {
             curItem = createPagerItem(mCurItem, curIndex);
         }
-
-        Log.d(TAG, " - curIndex: " + curIndex);
-        Log.d(TAG, " - curItem: " + curItem);
 
         // Create a PagerItem for each item in the adapter
         // TODO limit items to: OFFSCREEN_ITEMS (left) + OFFSCREEN_ITEMS (right) + VISIBLE_ITEMS
@@ -1193,8 +1213,6 @@ public class ColumnPager extends ViewGroup {
                 if (item != null) {
                     lp.width = item.getWidth();
                     lp.position = item.getPosition();
-
-                    Log.d(TAG, " - Updated layout params for child #" + i + ": " + lp);
                 }
             }
         }
@@ -1240,9 +1258,11 @@ public class ColumnPager extends ViewGroup {
     }
 
     private void calculatePageOffsets(PagerItem curItem, int curIndex, PagerItem oldCurInfo) {
-        Log.d(TAG, "calculatePageOffsets(" + curItem + ", " + curIndex + ", " + oldCurInfo + ")");
+        boolean layoutChanged = false;
+        int pageWidth;
 
-        final int N = mAdapter.getCount();
+        // Refresh cached dimensions
+        refreshDimensions();
 
         // Fix up offsets for later layout.
         if (oldCurInfo != null) {
@@ -1265,16 +1285,14 @@ public class ColumnPager extends ViewGroup {
                     while (pos < item.getPosition()) {
                         // We don't have an item populated for this,
                         // ask the adapter for an offset.
-                        offset += getPageWidth() + mPageMargin;
+                        offset += mPageWidth + mPageMargin;
                         pos++;
                     }
 
-                    item.setWidth(getPageWidth());
+                    item.setWidth(calculatePageWidth(item.getPosition()));
 
                     item.setOffset(offset);
                     offset += item.getWidth() + mPageMargin;
-
-                    Log.d(TAG, " - Updated item: " + item);
                 }
             } else if (oldCurPosition > curItem.getPosition()) {
                 int itemIndex = mItems.size() - 1;
@@ -1292,25 +1310,32 @@ public class ColumnPager extends ViewGroup {
                     while (pos > item.getPosition()) {
                         // We don't have an item populated for this,
                         // ask the adapter for an offset.
-                        offset -= getPageWidth() + mPageMargin;
+                        offset -= mPageWidth + mPageMargin;
                         pos--;
                     }
 
-                    item.setWidth(getPageWidth());
+                    item.setWidth(calculatePageWidth(item.getPosition()));
 
                     offset -= item.getWidth() + mPageMargin;
                     item.setOffset(offset);
-
-                    Log.d(TAG, " - Updated item: " + item);
                 }
             }
         }
 
         // Update current item
-        curItem.setOffset(curItem.getIndex() * getPageWidth());
-        curItem.setWidth(getPageWidth());
+        pageWidth = calculatePageWidth(curItem.getPosition());
 
-        Log.d(TAG, " - Updated item: " + curItem);
+        curItem.setOffset(curItem.getIndex() * mPageWidth);
+
+        if(curItem.getWidth() != pageWidth) {
+            curItem.setWidth(pageWidth);
+            layoutChanged = true;
+
+            if(DEBUG) {
+                Log.v(TAG, "#" + curItem.getIndex() + " (" + curItem.getPosition() + ") Page width changed " +
+                        "(" + curItem.getWidth() + " -> " + pageWidth + ")");
+            }
+        }
 
         // Base all offsets off of curItem.
         final int itemCount = mItems.size();
@@ -1319,22 +1344,31 @@ public class ColumnPager extends ViewGroup {
 
         // Update first + last offsets
         mFirstOffset = 0;
-        mLastOffset = (mAdapter.getCount() - getColumns()) * getPageWidth();
+        mLastOffset = (mAdapter.getCount() - getColumns()) * mPageWidth;  // TODO this doesn't include padding
 
         // Previous pages
         for (int i = curIndex - 1; i >= 0; i--, pos--) {
             final PagerItem item = mItems.get(i);
 
+            // TODO this doesn't look right:
             while (pos > item.getPosition()) {
-                offset -= getPageWidth() + mPageMargin;
+                offset -= mPageWidth + mPageMargin;
             }
 
-            item.setWidth(getPageWidth());
+            pageWidth = calculatePageWidth(item.getPosition());
+
+            if(item.getWidth() != pageWidth) {
+                item.setWidth(pageWidth);
+                layoutChanged = true;
+
+                if(DEBUG) {
+                    Log.v(TAG, "#" + item.getIndex() + " (" + item.getPosition() + ") Page width changed " +
+                        "(" + item.getWidth() + " -> " + pageWidth + ")");
+                }
+            }
 
             offset -= item.getWidth() + mPageMargin;
             item.setOffset(offset);
-
-            Log.d(TAG, " - Updated item: " + item);
 
 //            if (item.getPosition() == 0) {
 //                mFirstOffset = offset;
@@ -1348,26 +1382,36 @@ public class ColumnPager extends ViewGroup {
         for (int i = curIndex + 1; i < itemCount; i++, pos++) {
             final PagerItem item = mItems.get(i);
 
+            // TODO this doesn't look right:
             while (pos < item.getPosition()) {
-                offset += getPageWidth() + mPageMargin;
+                offset += mPageWidth + mPageMargin;
             }
 
 //            if (item.getPosition() == N - 1) {
-//                mLastOffset = offset + item.getWidth() - (getPageWidth() * getColumns());
+//                mLastOffset = offset + item.getWidth() - (mPageWidth * getColumns());
 //            }
 
-            item.setWidth(getPageWidth());
+            pageWidth = calculatePageWidth(item.getPosition());
+
+            if(item.getWidth() != pageWidth) {
+                item.setWidth(pageWidth);
+                layoutChanged = true;
+
+                if(DEBUG) {
+                    Log.v(TAG, "#" + item.getIndex() + " (" + item.getPosition() + ") Page width changed " +
+                        "(" + item.getWidth() + " -> " + pageWidth + ")");
+                }
+            }
 
             item.setOffset(offset);
             offset += item.getWidth() + mPageMargin;
-
-            Log.d(TAG, " - Updated item: " + item);
         }
 
-        Log.d(TAG, " - mFirstOffset: " + mFirstOffset);
-        Log.d(TAG, " - mLastOffset: " + mLastOffset);
-
         mNeedCalculatePageOffsets = false;
+
+        if(layoutChanged) {
+            requestLayout();
+        }
     }
 
     private boolean resetTouch() {
@@ -1394,7 +1438,6 @@ public class ColumnPager extends ViewGroup {
 
         float oldScrollX = getScrollX();
         float scrollX = oldScrollX + deltaX;
-        final int width = getClientWidth();
 
         float leftBound = mFirstOffset;
         float rightBound = mLastOffset;
@@ -1411,19 +1454,19 @@ public class ColumnPager extends ViewGroup {
 
         if (lastItem.getIndex() != mAdapter.getCount() - 1) {
             rightAbsolute = false;
-            rightBound = lastItem.getOffset() - (getPageWidth() * (getColumns() - 1));
+            rightBound = lastItem.getOffset() - (mPageWidth * (getColumns() - 1));
         }
 
         if (scrollX < leftBound) {
             if (leftAbsolute) {
                 float over = leftBound - scrollX;
-                needsInvalidate = mLeftEdge.onPull(Math.abs(over) / width);
+                needsInvalidate = mLeftEdge.onPull(Math.abs(over) / mClientWidth);
             }
             scrollX = leftBound;
         } else if (scrollX > rightBound) {
             if (rightAbsolute) {
                 float over = scrollX - rightBound;
-                needsInvalidate = mRightEdge.onPull(Math.abs(over) / width);
+                needsInvalidate = mRightEdge.onPull(Math.abs(over) / mClientWidth);
             }
             scrollX = rightBound;
         }
@@ -1500,18 +1543,11 @@ public class ColumnPager extends ViewGroup {
     }
 
     private void scrollToItem(int position, boolean smoothScroll, int velocity, boolean dispatchSelected) {
-        Log.d(TAG, "scrollToItem(" + position + ", " + smoothScroll + ", " + velocity + ", " + dispatchSelected + ")");
-
         // Calculate X destination
         final PagerItem curInfo = infoForPosition(position);
         int destX = 0;
 
-        Log.d(TAG, " - mFirstOffset: " + mFirstOffset);
-        Log.d(TAG, " - mLastOffset: " +mLastOffset);
-
         if (curInfo != null) {
-            Log.d(TAG, " - curInfo.getOffset(): " + curInfo.getOffset());
-
             destX = (int) (Math.max(mFirstOffset, Math.min(curInfo.getOffset(), mLastOffset)));
         }
 
@@ -1550,11 +1586,9 @@ public class ColumnPager extends ViewGroup {
     }
 
     private void recomputeScrollPosition(int width, int oldWidth, int margin, int oldMargin) {
-        Log.d(TAG, "recomputeScrollPosition(" + width + ", " + oldWidth + ", " + margin + ", " + oldMargin + ")");
-
         if (oldWidth > 0 && !mItems.isEmpty()) {
             if (!mScroller.isFinished()) {
-                mScroller.setFinalX(getCurrentItem() * getClientWidth());
+                mScroller.setFinalX(getCurrentItem() * mClientWidth);
             } else {
                 final int widthWithMargin = width - getPaddingLeft() - getPaddingRight() + margin;
                 final int oldWidthWithMargin = oldWidth - getPaddingLeft() - getPaddingRight() + oldMargin;
@@ -1574,6 +1608,17 @@ public class ColumnPager extends ViewGroup {
                 scrollTo(scrollOffset, getScrollY());
             }
         }
+    }
+
+    private void refreshDimensions() {
+        // Update client width
+        mClientWidth = getMeasuredWidth() - getPaddingLeft() - getPaddingRight();
+
+        // Update page width
+        mPageWidth = (int) Math.floor(((float) mClientWidth) / getColumns());
+
+        // Update remaining width
+        mRemainingWidth = mClientWidth - (mPageWidth * getColumns());
     }
 
     /**
@@ -1613,8 +1658,6 @@ public class ColumnPager extends ViewGroup {
     }
 
     private int determineTargetPage(int currentPage, float pageOffset, int velocity, int deltaX) {
-        Log.d(TAG, "determineTargetPage(" + currentPage + ", " + pageOffset + ", " + velocity + ", " + deltaX + ")");
-
         int targetPage;
 
         if (Math.abs(deltaX) > mFlingDistance && Math.abs(velocity) > mMinimumVelocity) {
@@ -1632,7 +1675,6 @@ public class ColumnPager extends ViewGroup {
             targetPage = Math.max(firstItem.getPosition(), Math.min(targetPage, lastItem.getPosition()));
         }
 
-        Log.d(TAG, " - targetPage: " + targetPage);
         return targetPage;
     }
 
@@ -1749,7 +1791,7 @@ public class ColumnPager extends ViewGroup {
                     continue;
                 }
 
-                final float transformPos = (float) (child.getLeft() - scrollX) / getClientWidth();
+                final float transformPos = (float) (child.getLeft() - scrollX) / mClientWidth;
                 mPageTransformer.transformPage(child, transformPos);
             }
         }
@@ -1835,11 +1877,7 @@ public class ColumnPager extends ViewGroup {
      * @param velocity the velocity associated with a fling, if applicable. (0 otherwise)
      */
     public void smoothScrollTo(int x, int y, int velocity) {
-        Log.d(TAG, "smoothScrollTo(" + x + ", " + y + ", " + velocity + ")");
-
         if (getChildCount() == 0) {
-            Log.d(TAG, " - Nothing to do");
-
             // Nothing to do.
             setScrollingCacheEnabled(false);
             return;
@@ -1875,9 +1913,8 @@ public class ColumnPager extends ViewGroup {
         setScrollingCacheEnabled(true);
         setScrollState(SCROLL_STATE_SETTLING);
 
-        final int width = getClientWidth();
-        final int halfWidth = width / 2;
-        final float distanceRatio = Math.min(1f, 1.0f * Math.abs(dx) / width);
+        final int halfWidth = mClientWidth / 2;
+        final float distanceRatio = Math.min(1f, 1.0f * Math.abs(dx) / mClientWidth);
         final float distance = halfWidth + halfWidth * distanceInfluenceForSnapDuration(distanceRatio);
 
         int duration;
@@ -1886,7 +1923,7 @@ public class ColumnPager extends ViewGroup {
         if (velocity > 0) {
             duration = 4 * Math.round(1000 * Math.abs(distance / velocity));
         } else {
-            final float pageDelta = (float) Math.abs(dx) / (getPageWidth() + mPageMargin);
+            final float pageDelta = (float) Math.abs(dx) / (mPageWidth + mPageMargin);
             duration = (int) ((pageDelta + 1) * 100);
         }
 
@@ -1894,7 +1931,6 @@ public class ColumnPager extends ViewGroup {
 
         // Reset the "scroll started" flag. It will be flipped to true in all places
         // where we call computeScrollOffset().
-        Log.d(TAG, " - Scrolling from (" + sx + ", " + sy + ") to (" + dx + ", " + dy + ") in " + duration + "ms");
 
         mIsScrollStarted = false;
         mScroller.startScroll(sx, sy, dx, dy, duration);
@@ -2081,7 +2117,7 @@ public class ColumnPager extends ViewGroup {
                 final int height = getHeight() - getPaddingTop() - getPaddingBottom();
 
                 canvas.rotate(90);
-                canvas.translate(-getPaddingTop(), -(mLastOffset + (getPageWidth() * getColumns())));
+                canvas.translate(-getPaddingTop(), -(mLastOffset + (mPageWidth * getColumns())));
                 mRightEdge.setSize(height, width);
                 needsInvalidate |= mRightEdge.draw(canvas);
                 canvas.restoreToCount(restoreCount);
@@ -2122,8 +2158,6 @@ public class ColumnPager extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-        Log.d(TAG, "onLayout(" + changed + ", " + l + ", " + t + ", " + r + ", " + b + ")");
-
         int height = b - t;
 
         int paddingLeft = getPaddingLeft();
@@ -2164,7 +2198,7 @@ public class ColumnPager extends ViewGroup {
             int childLeft = paddingLeft + item.getOffset();
             int childTop = paddingTop;
 
-            if(lp.needsMeasure) {
+            if(lp.needsMeasure || lp.width != item.getWidth()) {
                 final int widthSpec = MeasureSpec.makeMeasureSpec(
                     item.getWidth(),
                     MeasureSpec.EXACTLY
@@ -2198,8 +2232,6 @@ public class ColumnPager extends ViewGroup {
 
         // Update scroll position
         if (mFirstLayout || mColumns != mCurColumns) {
-            Log.d(TAG, " - Scrolling to current item (" + mCurItem + ")");
-
             scrollToItem(mCurItem, false, 0, false);
         }
 
@@ -2209,8 +2241,6 @@ public class ColumnPager extends ViewGroup {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        Log.d(TAG, "onMeasure(" + widthMeasureSpec + ", " + heightMeasureSpec + ")");
-
         // For simple implementation, our internal size is always 0.
         // We depend on the container to specify the layout size of
         // our view.  We can't really know what it is since we will be
@@ -2222,7 +2252,7 @@ public class ColumnPager extends ViewGroup {
         );
 
         // Children are just made to fill our space.
-        int childWidthSize = getPageWidth();
+        int childWidthSize = mPageWidth;
         int childHeightSize = getMeasuredHeight() - getPaddingTop() - getPaddingBottom();
 
         for(int i = 0; i < getChildCount(); ++i) {
@@ -2230,7 +2260,7 @@ public class ColumnPager extends ViewGroup {
             final PagerItem item = mItems.get(i);
 
             if(item.getWidth() == 0) {
-                item.setWidth((int) (((float) getClientWidth()) / 3));
+                item.setWidth(calculatePageWidth(item.getPosition()));
             }
 
             final LayoutParams lp = (LayoutParams) child.getLayoutParams();
@@ -2419,11 +2449,9 @@ public class ColumnPager extends ViewGroup {
         }
 
         if (mVelocityTracker == null) {
-            Log.d(TAG, " - Obtaining velocity tracker instance");
             mVelocityTracker = VelocityTracker.obtain();
         }
 
-        Log.d(TAG, " - Calculating velocity for: " + ev);
         mVelocityTracker.addMovement(ev);
 
         /*
@@ -2471,10 +2499,14 @@ public class ColumnPager extends ViewGroup {
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
 
-        // Make sure scroll position is set correctly.
-        if (w != oldw) {
-            recomputeScrollPosition(w, oldw, mPageMargin, mPageMargin);
-        }
+        // Refresh cached dimensions
+        refreshDimensions();
+
+        // Populate layout
+        populate();
+
+        // Ensure scroll position is set correctly
+        scrollToItem(mCurItem, false);
     }
 
     @Override
@@ -2498,11 +2530,9 @@ public class ColumnPager extends ViewGroup {
         }
 
         if (mVelocityTracker == null) {
-            Log.d(TAG, " - Obtaining velocity tracker instance");
             mVelocityTracker = VelocityTracker.obtain();
         }
 
-        Log.d(TAG, " - Calculating velocity for: " + ev);
         mVelocityTracker.addMovement(ev);
 
         final int action = ev.getAction();
@@ -2564,11 +2594,9 @@ public class ColumnPager extends ViewGroup {
                     mPopulatePending = true;
 
                     // Calculate velocity
-                    Log.d(TAG, " - Calculating velocity for pointer " + mActivePointerId);
                     mVelocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
 
                     float initialVelocity = VelocityTrackerCompat.getXVelocity(mVelocityTracker, mActivePointerId);
-                    Log.d(TAG, " - initialVelocity: " + initialVelocity);
 
                     // Retrieve current item
                     final PagerItem item = infoForCurrentScrollPosition();
@@ -2579,7 +2607,7 @@ public class ColumnPager extends ViewGroup {
                     // Determine target page
                     int nextPage = determineTargetPage(
                         item.getPosition(),
-                        ((float)(getScrollX() - item.getOffset())) / getPageWidth(),
+                        ((float)(getScrollX() - item.getOffset())) / mPageWidth,
                         (int) initialVelocity,
                         (int) (x - mInitialMotionX)
                     );
