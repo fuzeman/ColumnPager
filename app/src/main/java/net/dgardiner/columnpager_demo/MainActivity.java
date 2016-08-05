@@ -5,6 +5,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.ViewTreeObserver;
+import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import net.dgardiner.columnpager.ColumnPager;
@@ -13,6 +14,7 @@ import net.dgardiner.columnpager_demo.adapters.SimpleAdapter;
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
+    FrameLayout container;
     ColumnPager pager;
 
     ColumnControl columnControl;
@@ -34,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // Find elements
+        container = (FrameLayout) findViewById(R.id.container);
         pager = (ColumnPager) findViewById(R.id.pager);
 
         columnSeekBar = (SeekBar) findViewById(R.id.columnsSeekBar);
@@ -64,22 +67,24 @@ public class MainActivity extends AppCompatActivity {
         columnControl.setProgress(3);
 
         // Update width + height seekbars once drawn
-        pager.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+        container.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
+                Log.d(TAG, "onGlobalLayout() - width: " + container.getMeasuredWidth() + ", height: " + container.getMeasuredHeight());
+
                 // Update width control
-                widthControl.setMax(pager.getMeasuredWidth());
-                widthControl.setProgress(pager.getMeasuredWidth());
+                widthControl.setMax(container.getMeasuredWidth());
+                widthControl.setProgress(container.getMeasuredWidth());
 
                 // Update height control
-                heightControl.setMax(pager.getMeasuredHeight());
-                heightControl.setProgress(pager.getMeasuredHeight());
+                heightControl.setMax(container.getMeasuredHeight());
+                heightControl.setProgress(container.getMeasuredHeight());
 
                 // Remove listener
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                    pager.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    container.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                 } else {
-                    pager.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                    container.getViewTreeObserver().removeGlobalOnLayoutListener(this);
                 }
             }
         });
