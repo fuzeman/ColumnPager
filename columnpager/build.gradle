@@ -1,5 +1,5 @@
-def _versionCode = 0
-def _versionName = '0.0.0'
+def _versionCode = 1
+def _versionName = '1.0.0'
 
 apply plugin: 'com.android.library'
 apply plugin: 'com.novoda.bintray-release'
