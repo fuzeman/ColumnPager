@@ -78,6 +78,6 @@ public class PagerItem {
 
     @Override
     public String toString() {
-        return "<PagerItem index: " + index + ", object: " + object + ", offset: " + offset + ", width: " + width + ">";
+        return "<PagerItem position: " + position + ", index: " + index + ", object: " + object + ", offset: " + offset + ", width: " + width + ">";
     }
 }

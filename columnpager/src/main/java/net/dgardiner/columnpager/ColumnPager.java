@@ -946,6 +946,10 @@ public class ColumnPager extends ViewGroup {
             mItems.add(index, item);
         }
 
+        if(DEBUG) {
+            Log.d(TAG, "Created new item: " + item);
+        }
+
         return item;
     }
 
@@ -976,7 +980,7 @@ public class ColumnPager extends ViewGroup {
 
     private PagerItem infoForPosition(int position) {
         for (PagerItem item : mItems) {
-            if (item.getIndex() == position) {
+            if (item.getPosition() == position) {
                 return item;
             }
         }
@@ -1258,6 +1262,10 @@ public class ColumnPager extends ViewGroup {
     }
 
     private void calculatePageOffsets(PagerItem curItem, int curIndex, PagerItem oldCurInfo) {
+        if(DEBUG) {
+            Log.d(TAG, "calculatePageOffsets(" + curItem + ", " + curIndex + ", " + oldCurInfo + ")");
+        }
+
         boolean layoutChanged = false;
         int pageWidth;
 
@@ -1325,7 +1333,7 @@ public class ColumnPager extends ViewGroup {
         // Update current item
         pageWidth = calculatePageWidth(curItem.getPosition());
 
-        curItem.setOffset(curItem.getIndex() * mPageWidth);
+        curItem.setOffset(curItem.getPosition() * mPageWidth);
 
         if(curItem.getWidth() != pageWidth) {
             curItem.setWidth(pageWidth);
@@ -1447,12 +1455,12 @@ public class ColumnPager extends ViewGroup {
         final PagerItem firstItem = mItems.get(0);
         final PagerItem lastItem = mItems.get(mItems.size() - 1);
 
-        if (firstItem.getIndex() != 0) {
+        if (firstItem.getPosition() != 0) {
             leftAbsolute = false;
             leftBound = firstItem.getOffset();
         }
 
-        if (lastItem.getIndex() != mAdapter.getCount() - 1) {
+        if (lastItem.getPosition() != mAdapter.getCount() - 1) {
             rightAbsolute = false;
             rightBound = lastItem.getOffset() - (mPageWidth * (getColumns() - 1));
         }
@@ -2218,7 +2226,7 @@ public class ColumnPager extends ViewGroup {
             }
 
             if (DEBUG) {
-                Log.v(TAG, " - Positioning #" + i + " (" + item.getIndex() + ") " + child + " f=" + item.getObject()
+                Log.v(TAG, " - Positioning #" + item.getIndex() + " (" + item.getPosition() + ") " + child + " f=" + item.getObject()
                         + " - (" + childLeft + "," + childTop + ") "
                         + child.getMeasuredWidth() + "x" + child.getMeasuredHeight());
             }
@@ -2257,12 +2265,6 @@ public class ColumnPager extends ViewGroup {
 
         for(int i = 0; i < getChildCount(); ++i) {
             final View child = getChildAt(i);
-            final PagerItem item = mItems.get(i);
-
-            if(item.getWidth() == 0) {
-                item.setWidth(calculatePageWidth(item.getPosition()));
-            }
-
             final LayoutParams lp = (LayoutParams) child.getLayoutParams();
 
             if(lp == null) {
