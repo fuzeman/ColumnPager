@@ -1,4 +1,8 @@
+def _versionCode = 0
+def _versionName = '0.0.0'
+
 apply plugin: 'com.android.library'
+apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 23
@@ -7,8 +11,9 @@ android {
     defaultConfig {
         minSdkVersion 15
         targetSdkVersion 23
-        versionCode 1
-        versionName "1.0"
+
+        versionCode _versionCode
+        versionName _versionName
     }
     buildTypes {
         release {
@@ -23,4 +28,14 @@ dependencies {
     compile 'com.android.support:support-v4:23.3.0'
 
     testCompile 'junit:junit:4.12'
+}
+
+publish {
+    userOrg = 'fuzeman'
+
+    groupId = 'net.dgardiner'
+    artifactId = 'columnpager'
+    publishVersion = _versionName
+
+    website = 'https://github.com/fuzeman/ColumnPager'
 }
